@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useEvmAddress, useIsSignedIn } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useIsSignedIn, useIsInitialized } from '@coinbase/cdp-hooks';
 import { createPaymentSession, executePayment } from '@/lib/payments/x402-payment';
 
 interface Workflow {
@@ -19,13 +19,14 @@ interface WorkflowExecutorProps {
 export function WorkflowExecutor({ workflows, onExecute }: WorkflowExecutorProps) {
   const { evmAddress } = useEvmAddress();
   const { isSignedIn } = useIsSignedIn();
+  const { isInitialized } = useIsInitialized();
   const [executing, setExecuting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
   const handleExecute = async (workflow: Workflow) => {
-    if (!wallet || !isInitialized) {
-      setError('Wallet not initialized. Please refresh the page.');
+    if (!isSignedIn || !evmAddress || !isInitialized) {
+      setError('Wallet not connected. Please sign in first.');
       return;
     }
 
@@ -37,10 +38,10 @@ export function WorkflowExecutor({ workflows, onExecute }: WorkflowExecutorProps
       console.log(`🚀 Executing workflow: ${workflow.name}`);
       
       // Step 1: Create payment session
-      const session = await createPaymentSession(wallet, workflow.price);
+      const session = await createPaymentSession(evmAddress, workflow.price);
       
       // Step 2: Execute payment (automatic, no popup)
-      const hash = await executePayment(wallet, session, workflow.price);
+      const hash = await executePayment(evmAddress, session, workflow.price);
       setTxHash(hash);
       
       // Step 3: Execute workflow with payment proof
